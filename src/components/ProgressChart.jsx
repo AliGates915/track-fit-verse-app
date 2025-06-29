@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useWorkout } from '@/context/WorkoutContext';
 
 const ProgressChart = () => {
   const { workouts } = useWorkout();
 
-  // Generate last 7 days data
+  // Get last 7 days of data
   const getLast7DaysData = () => {
     const days = [];
     const today = new Date();
@@ -14,17 +14,17 @@ const ProgressChart = () => {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
       
-      const dayWorkouts = workouts.filter(workout => {
-        const workoutDate = new Date(workout.date);
-        return workoutDate.toDateString() === date.toDateString();
-      });
+      const dayWorkouts = workouts.filter(workout => 
+        workout.date.split('T')[0] === dateString
+      );
       
-      const totalCalories = dayWorkouts.reduce((sum, w) => sum + w.calories, 0);
-      const totalDuration = dayWorkouts.reduce((sum, w) => sum + w.duration, 0);
+      const totalCalories = dayWorkouts.reduce((sum, workout) => sum + workout.calories, 0);
+      const totalDuration = dayWorkouts.reduce((sum, workout) => sum + workout.duration, 0);
       
       days.push({
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         calories: totalCalories,
         duration: totalDuration,
         workouts: dayWorkouts.length
@@ -34,49 +34,32 @@ const ProgressChart = () => {
     return days;
   };
 
-  const chartData = getLast7DaysData();
+  const data = getLast7DaysData();
+
+  if (workouts.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No workout data to display</p>
+        <p className="text-sm text-gray-400">Start logging workouts to see your progress!</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Calories Chart */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Daily Calories Burned</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis />
-            <Tooltip 
-              formatter={(value) => [`${value} kcal`, 'Calories']}
-              labelStyle={{ color: '#374151' }}
-            />
-            <Bar dataKey="calories" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Duration Chart */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Daily Workout Duration</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis />
-            <Tooltip 
-              formatter={(value) => [`${value} min`, 'Duration']}
-              labelStyle={{ color: '#374151' }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="duration" 
-              stroke="#10B981" 
-              strokeWidth={3}
-              dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="w-full h-80">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip 
+            formatter={(value, name) => [value, name === 'calories' ? 'Calories' : 'Duration (min)']}
+            labelFormatter={(label) => `Date: ${label}`}
+          />
+          <Bar dataKey="calories" fill="#3B82F6" name="calories" />
+          <Bar dataKey="duration" fill="#10B981" name="duration" />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 };
